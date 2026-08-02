@@ -1,0 +1,45 @@
+// 公開版 (on_audio_query_android 1.1.0) からの変更点:
+//
+//   * namespace を宣言した。AGP 8 からは AndroidManifest の package 属性で
+//     名前空間を指定できなくなり、宣言が無いとビルドが落ちる。
+//   * buildscript ブロックを外した。公開版は AGP 4.1.3 / Kotlin 1.6.10 を
+//     自前のクラスパスに載せていてアプリ側と衝突する。今の Flutter は
+//     settings.gradle.kts でプラグインを解決するので、宣言しないほうが素直に動く。
+//   * compileSdk を上げ、Java と Kotlin のターゲットを 11 に揃えた。
+//
+// Kotlin のソースには手を入れていない。
+
+group = 'com.lucasjosino.on_audio_query'
+version = '1.0-SNAPSHOT'
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace = 'com.lucasjosino.on_audio_query'
+    compileSdk = 35
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+}
+
+dependencies {
+    def lifecycle_version = '2.8.7'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+}

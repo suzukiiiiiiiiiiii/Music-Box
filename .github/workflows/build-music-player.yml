@@ -1,0 +1,53 @@
+name: Build Music Player APK
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+    paths:
+      - 'music_player/**'
+      - '.github/workflows/build-music-player.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: music_player
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 3.35 系に固定している。3.38 以降は AGP 9 の Built-in Kotlin に変わり、
+      # on_audio_query のような古いプラグインの .kt が黙って無視される。
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+
+      # android/ はリポジトリに置かず、毎回ここで生成する。
+      - name: Prepare android project
+        run: ./tool/prepare_android.sh
+
+      # 型エラーはここで見えるようにしておくが、APK を作れるかとは別なので
+      # ビルドは止めない。
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: Build APK
+        run: flutter build apk --release --no-shrink
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: music-player-apk
+          path: music_player/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

@@ -2,6 +2,12 @@
 
 端末に入っている音楽ファイルを再生する Android アプリ。見た目をユーザー自身が調整できるのが中心の機能。
 
+> **このリポジトリには別のアプリも入っています。**
+> `music_player/` は後から持ち込んだ別実装（MediaStore + `on_audio_query` ベース)で、
+> 下に書いてある Music Box とは独立したアプリです。APK は GitHub Actions の
+> **Build Music Player APK** が作ります。詳しくは
+> [music_player/README.md](music_player/README.md) を参照してください。
+
 ## 画面の作り
 
 下のバーで3つの面を行き来する。ミニプレイヤーはその上に常駐していて、一覧の

@@ -1,0 +1,4 @@
+<!-- package 属性は AGP 8 で使えなくなったので、android/build.gradle の
+     namespace に移した。 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+</manifest>

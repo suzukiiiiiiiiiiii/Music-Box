@@ -1,0 +1,13 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    require_trailing_commas: true
+    avoid_print: true
+
+analyzer:
+  errors:
+    # withOpacity の非推奨警告でビルドを止めない
+    deprecated_member_use: info
+    deprecated_member_use_from_same_package: info

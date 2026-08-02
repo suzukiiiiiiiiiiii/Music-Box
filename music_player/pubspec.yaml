@@ -1,0 +1,38 @@
+name: music_player
+description: 端末内の音楽を再生するローカルミュージックプレイヤー
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 再生エンジン
+  just_audio: ^0.9.42
+  # バックグラウンド再生 + 通知バーの操作
+  just_audio_background: ^0.0.1-beta.14
+  # 端末内の楽曲・アルバム・アーティストの取得（MediaStore）
+  on_audio_query: ^2.9.0
+  # 権限リクエスト
+  permission_handler: ^11.3.1
+  # 状態管理
+  provider: ^6.1.2
+  # プレイリスト・設定の保存
+  shared_preferences: ^2.3.2
+  # 再生位置ストリームの合成
+  rxdart: ^0.27.7
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+# on_audio_query の Android 実装は AGP 8 以降でビルドできない(namespace 未宣言)。
+# ビルド設定だけ直した改変版を packages/ に置いて差し替えている。
+dependency_overrides:
+  on_audio_query_android:
+    path: packages/on_audio_query_android
+
+flutter:
+  uses-material-design: true
