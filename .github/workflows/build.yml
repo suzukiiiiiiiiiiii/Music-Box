@@ -1,0 +1,52 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # android/ フォルダを毎回生成する。リポジトリには置かない。
+      # flutter create はテンプレートで上書きしてくるので、追跡しているファイルは
+      # そのあと git から戻す。生成された test/ は MyApp を参照していて
+      # flutter analyze が落ちるため消す。
+      - name: Generate android project
+        run: |
+          flutter create --platforms=android --project-name music_box --org com.example .
+          rm -rf test
+          git checkout -- lib pubspec.yaml README.md .gitignore analysis_options.yaml
+
+      # バックグラウンド再生に必要な宣言を入れた自前のマニフェストで上書き
+      - name: Apply AndroidManifest
+        run: cp android_config/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+      - run: flutter pub get
+
+      # APK を組む前にここで型エラーを落とす。lint の新版で info が増えても
+      # ビルドを止めたくないので info は致命にしない。
+      - run: flutter analyze --no-fatal-infos
+
+      # --no-shrink: R8 が just_audio_background のクラスを削ってしまう既知の問題を回避
+      - run: flutter build apk --release --no-shrink
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: music-box-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

@@ -19,6 +19,7 @@
 pubspec.yaml
 README.md
 .gitignore
+analysis_options.yaml
 android_config/AndroidManifest.xml
 lib/
   main.dart
@@ -42,7 +43,8 @@ lib/
 ## APK の作り方
 
 1. GitHub でリポジトリを作る(パブリックなら Actions は無料枠無制限)
-2. 上のファイルを push する。ブラウザからドラッグ&ドロップでも入る
+2. 上のファイルを push する。ブラウザからドラッグ&ドロップでも入る。
+   zip のまま置いても Actions はビルドできないので、必ず展開した状態で入れる
 3. Actions タブを開く。push した時点で自動的にビルドが始まる
 4. 完了したら実行結果ページの下にある Artifacts から `music-box-apk` をダウンロード
 5. スマホで zip を解凍して APK を開く。「提供元不明のアプリのインストール」を許可すれば入る
@@ -59,6 +61,9 @@ lib/
 
 **ビルドが `Namespace not specified` で落ちる**
 使っているパッケージが古い Android Gradle Plugin 向けのまま。`android/build.gradle.kts` に namespace を補う設定を足すか、そのパッケージを外す。今の構成では該当するものは入れていない。
+
+**`flutter analyze` が知らないエラーを出す**
+依存パッケージが破壊的変更を入れた可能性が高い。`pubspec.yaml` は主要な依存をキャレット指定で止めてあるので、上げるときは 1 つずつ。過去に `file_picker` が 11.0.0 で `FilePicker.platform` を廃止して static 呼び出しになった例がある。
 
 **`bytes` が見つからない、といったエラーが `library_model.dart` で出る**
 `audio_metadata_reader` のプロパティ名が変わった可能性がある。該当箇所は `_extractArt` の中だけで、しかも dynamic 経由なのでコンパイルは通るはず。ジャケットが出ない場合はここを疑う。ジャケットが無くてもタイトルから作ったグラデーションで代用されるので、再生自体は動く。

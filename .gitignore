@@ -1,0 +1,22 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# GitHub Actions が毎回生成するので追跡しない
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+/test/
+.metadata
+
+# エディタ
+.idea/
+.vscode/
+*.iml

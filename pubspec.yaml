@@ -1,0 +1,41 @@
+name: music_box
+description: A customizable offline music player.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  # just_audio 0.10.x が Dart ^3.6.0 / Flutter 3.27 以上を要求する。
+  # CardThemeData と Color.toARGB32() を使うので Flutter は 3.29 以上。
+  sdk: ^3.6.0
+  flutter: '>=3.29.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 再生エンジン。0.10.x の playlist API (setAudioSources) を使う。
+  just_audio: ^0.10.4
+  # バックグラウンド再生 + 通知バー操作。安定版がまだ無いので beta を指定する。
+  just_audio_background: ^0.0.1-beta.17
+  # 音源フォルダの選択。11.x で FilePicker.platform が消えて static 呼び出しに
+  # 変わったので、メジャーを勝手に跨がないよう上限を効かせておく。
+  file_picker: ^11.0.3
+  # READ_MEDIA_AUDIO の要求
+  permission_handler: ^13.0.0
+  # 設定とプレイリストの保存
+  shared_preferences: ^2.5.5
+  # ライブラリ索引とアートワークのキャッシュ置き場
+  path_provider: ^2.1.5
+  # 純 Dart のタグ読み取り(ネイティブコード無し = CI で壊れにくい)
+  audio_metadata_reader: ^1.7.1
+  # 状態管理
+  provider: ^6.1.5
+  # パス操作とアートワークのファイル名生成
+  path: ^1.9.0
+  crypto: ^3.0.6
+
+dev_dependencies:
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true
