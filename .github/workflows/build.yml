@@ -25,13 +25,13 @@ jobs:
 
       # android/ フォルダを毎回生成する。リポジトリには置かない。
       # flutter create はテンプレートで上書きしてくるので、追跡しているファイルは
-      # そのあと git から戻す。生成された test/ は MyApp を参照していて
-      # flutter analyze が落ちるため消す。
+      # そのあと git から戻す。生成される test/widget_test.dart は存在しない
+      # MyApp を参照していて解析が落ちるので、これだけ捨てる。
       - name: Generate android project
         run: |
           flutter create --platforms=android --project-name music_box --org com.example .
-          rm -rf test
-          git checkout -- lib pubspec.yaml README.md .gitignore analysis_options.yaml
+          rm -f test/widget_test.dart
+          git checkout -- lib test pubspec.yaml README.md .gitignore analysis_options.yaml
 
       # バックグラウンド再生に必要な宣言を入れた自前のマニフェストで上書き
       - name: Apply AndroidManifest
@@ -42,6 +42,8 @@ jobs:
       # APK を組む前にここで型エラーを落とす。lint の新版で info が増えても
       # ビルドを止めたくないので info は致命にしない。
       - run: flutter analyze --no-fatal-infos
+
+      - run: flutter test
 
       # --no-shrink: R8 が just_audio_background のクラスを削ってしまう既知の問題を回避
       - run: flutter build apk --release --no-shrink

@@ -1,13 +1,13 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../library_model.dart';
+import '../app_theme.dart';
 import '../models.dart';
 import '../settings_model.dart';
 import '../widgets.dart';
 
-/// このアプリの中心。上のプレビューが下のつまみに合わせて即座に変わる。
+/// このアプリの中心。プレビューは画面の上に貼り付いたままで、下のつまみを
+/// どれだけ動かしても視界から消えない。
 class ThemeLabScreen extends StatelessWidget {
   const ThemeLabScreen({super.key});
 
@@ -16,137 +16,133 @@ class ThemeLabScreen extends StatelessWidget {
     final s = context.watch<SettingsModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('設定')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+      appBar: AppBar(
+        title: const Text('テーマ'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.restart_alt_rounded),
+            tooltip: '見た目を初期状態に戻す',
+            onPressed: s.resetToDefaults,
+          ),
+        ],
+      ),
+      body: Column(
         children: [
-          const _PreviewCard(),
-          const SizedBox(height: 28),
-
-          _SectionTitle('背景'),
-          SegmentedButton<SurfaceMode>(
-            segments: const [
-              ButtonSegment(value: SurfaceMode.light, label: Text('ライト')),
-              ButtonSegment(value: SurfaceMode.dark, label: Text('ダーク')),
-              ButtonSegment(value: SurfaceMode.amoled, label: Text('真っ黒')),
-            ],
-            selected: {s.surface},
-            onSelectionChanged: (v) => s.surface = v.first,
+          // ここが貼り付く部分。スクロールしても動かない。
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: const _PreviewCard(),
           ),
-          const SizedBox(height: 8),
-          if (s.surface == SurfaceMode.amoled)
-            Text('有機ELの画面では真っ黒の部分が消灯するので、電池が長持ちします。',
-                style: Theme.of(context).textTheme.bodySmall),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              children: [
+                const _SectionTitle('背景'),
+                SegmentedButton<SurfaceMode>(
+                  segments: [
+                    for (final m in SurfaceMode.values)
+                      ButtonSegment(value: m, label: Text(m.label)),
+                  ],
+                  selected: {s.surface},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (v) => s.surface = v.first,
+                ),
+                if (s.surface == SurfaceMode.amoled) ...[
+                  const SizedBox(height: 8),
+                  Text('有機ELの画面では真っ黒の部分が消灯するので、電池が長持ちします。',
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
 
-          const SizedBox(height: 24),
-          _SectionTitle('アクセント色'),
-          SwitchListTile(
-            value: s.accentFromArt,
-            onChanged: (v) => s.accentFromArt = v,
-            title: const Text('アルバムアートから色を取る'),
-            subtitle: const Text('曲が変わるたびにジャケットの色に合わせます'),
-            contentPadding: EdgeInsets.zero,
-          ),
-          const SizedBox(height: 8),
-          Opacity(
-            opacity: s.accentFromArt ? 0.4 : 1,
-            child: IgnorePointer(
-              ignoring: s.accentFromArt,
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: SettingsModel.presetAccents.entries.map((e) {
-                  final selected = s.accent.toARGB32() == e.value.toARGB32();
-                  return GestureDetector(
-                    onTap: () => s.accent = e.value,
+                const SizedBox(height: 28),
+                const _SectionTitle('アクセント色'),
+                SwitchListTile(
+                  value: s.accentFromArt,
+                  onChanged: (v) => s.accentFromArt = v,
+                  title: const Text('アルバムアートから色を取る'),
+                  subtitle: const Text('曲が変わるたびにジャケットの色に合わせます'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 4),
+                Opacity(
+                  opacity: s.accentFromArt ? 0.4 : 1,
+                  child: IgnorePointer(
+                    ignoring: s.accentFromArt,
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: e.value,
-                            borderRadius: BorderRadius.circular(s.radius * 0.8),
-                            border: selected
-                                ? Border.all(
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                    width: 2.5)
-                                : null,
-                          ),
-                          child: selected
-                              ? Icon(Icons.check_rounded,
-                                  size: 20, color: _onColor(e.value))
-                              : null,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(e.key, style: Theme.of(context).textTheme.bodySmall),
+                        const _AccentSwatches(),
+                        const SizedBox(height: 16),
+                        const _CustomAccentPicker(),
                       ],
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+                const _SectionTitle('形と間隔'),
+                _SliderRow(
+                  label: '角の丸み',
+                  value: s.radius,
+                  min: 0,
+                  max: 28,
+                  display: '${s.radius.round()}',
+                  onChanged: (v) => s.radius = v,
+                ),
+                _SliderRow(
+                  label: '行の高さ',
+                  value: s.density,
+                  min: 0.85,
+                  max: 1.2,
+                  display: s.density < 0.95
+                      ? '詰める'
+                      : (s.density > 1.08 ? 'ゆったり' : 'ふつう'),
+                  onChanged: (v) => s.density = v,
+                ),
+                _SliderRow(
+                  label: '文字の大きさ',
+                  value: s.textScale,
+                  min: 0.85,
+                  max: 1.3,
+                  display: '${(s.textScale * 100).round()}%',
+                  onChanged: (v) => s.textScale = v,
+                ),
+
+                const SizedBox(height: 20),
+                const _SectionTitle('ジャケット'),
+                SegmentedButton<ArtworkShape>(
+                  segments: [
+                    for (final shape in ArtworkShape.values)
+                      ButtonSegment(value: shape, label: Text(shape.label)),
+                  ],
+                  selected: {s.artworkShape},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (v) => s.artworkShape = v.first,
+                ),
+                SwitchListTile(
+                  value: s.showArtInList,
+                  onChanged: (v) => s.showArtInList = v,
+                  title: const Text('一覧にジャケットを出す'),
+                  subtitle: const Text('切ると1画面に入る曲数が増えます'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                SwitchListTile(
+                  value: s.albumGrid,
+                  onChanged: (v) => s.albumGrid = v,
+                  title: const Text('アルバムをタイルで並べる'),
+                  subtitle: const Text('切ると1行ずつの表示になります'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
             ),
           ),
-
-          const SizedBox(height: 24),
-          _SectionTitle('形と間隔'),
-          _SliderRow(
-            label: '角の丸み',
-            value: s.radius,
-            min: 0,
-            max: 28,
-            display: '${s.radius.round()}',
-            onChanged: (v) => s.radius = v,
-          ),
-          _SliderRow(
-            label: '行の高さ',
-            value: s.density,
-            min: 0.85,
-            max: 1.2,
-            display: s.density < 0.95
-                ? '詰める'
-                : (s.density > 1.08 ? 'ゆったり' : 'ふつう'),
-            onChanged: (v) => s.density = v,
-          ),
-          _SliderRow(
-            label: '文字の大きさ',
-            value: s.textScale,
-            min: 0.85,
-            max: 1.3,
-            display: '${(s.textScale * 100).round()}%',
-            onChanged: (v) => s.textScale = v,
-          ),
-          SwitchListTile(
-            value: s.showArtInList,
-            onChanged: (v) => s.showArtInList = v,
-            title: const Text('一覧にジャケットを出す'),
-            subtitle: const Text('切ると1画面に入る曲数が増えます'),
-            contentPadding: EdgeInsets.zero,
-          ),
-
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: s.resetToDefaults,
-            icon: const Icon(Icons.restart_alt_rounded),
-            label: const Text('見た目を初期状態に戻す'),
-          ),
-
-          const SizedBox(height: 36),
-          const Divider(),
-          const SizedBox(height: 20),
-          _SectionTitle('音楽フォルダ'),
-          const _FolderSection(),
         ],
       ),
     );
   }
-
-  static Color _onColor(Color c) =>
-      c.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 }
 
-/// つまみを動かした結果がその場で見えるように、実物と同じ部品で組む。
+/// 実物と同じ部品で組んだプレビュー。つまみの結果がここに即座に出る。
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard();
 
@@ -174,18 +170,24 @@ class _PreviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Artwork(song: sample, size: 52 * s.density, radius: s.radius * 0.6),
-              const SizedBox(width: 12),
+              if (s.showArtInList) ...[
+                Artwork(song: sample, size: 52 * s.density),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(sample.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 15 * s.textScale,
                         )),
                     Text('${sample.artist} · ${sample.album}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12 * s.textScale)),
                   ],
                 ),
@@ -194,14 +196,14 @@ class _PreviewCard extends StatelessWidget {
                   style: TextStyle(fontSize: 12 * s.textScale)),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Slider(value: 0.42, onChanged: (_) {}),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.shuffle_rounded, size: 20),
               const SizedBox(width: 20),
-              const Icon(Icons.skip_previous_rounded, size: 28),
+              const Icon(Icons.skip_previous_rounded, size: 26),
               const SizedBox(width: 14),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -210,10 +212,10 @@ class _PreviewCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(s.radius + 4),
                 ),
                 child: Icon(Icons.play_arrow_rounded,
-                    size: 28, color: scheme.onPrimary),
+                    size: 26, color: scheme.onPrimary),
               ),
               const SizedBox(width: 14),
-              const Icon(Icons.skip_next_rounded, size: 28),
+              const Icon(Icons.skip_next_rounded, size: 26),
               const SizedBox(width: 20),
               const Icon(Icons.repeat_rounded, size: 20),
             ],
@@ -224,51 +226,108 @@ class _PreviewCard extends StatelessWidget {
   }
 }
 
-class _FolderSection extends StatelessWidget {
-  const _FolderSection();
+class _AccentSwatches extends StatelessWidget {
+  const _AccentSwatches();
 
   @override
   Widget build(BuildContext context) {
-    final library = context.watch<LibraryModel>();
+    final s = context.watch<SettingsModel>();
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: SettingsModel.presetAccents.entries.map((e) {
+        final selected = s.accent.toARGB32() == e.value.toARGB32();
+        return GestureDetector(
+          onTap: () => s.accent = e.value,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: e.value,
+                  borderRadius: BorderRadius.circular(s.radius * 0.8),
+                  border: selected
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          width: 2.5)
+                      : null,
+                ),
+                child: selected
+                    ? Icon(Icons.check_rounded,
+                        size: 20, color: readableOn(e.value))
+                    : null,
+              ),
+              const SizedBox(height: 4),
+              Text(e.key, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+/// プリセットに無い色を自分で作る。色相・鮮やかさ・明るさの3本。
+class _CustomAccentPicker extends StatelessWidget {
+  const _CustomAccentPicker();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsModel>();
+    final hsl = HSLColor.fromColor(s.accent);
+
+    void apply({double? h, double? sat, double? l}) {
+      s.accent = HSLColor.fromAHSL(
+        1,
+        h ?? hsl.hue,
+        sat ?? hsl.saturation,
+        l ?? hsl.lightness,
+      ).toColor();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('これらの場所を自動で見ています:',
-            style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 4),
-        ...LibraryModel.defaultFolders.map(
-          (f) => Text('・$f', style: Theme.of(context).textTheme.bodySmall),
-        ),
-        const SizedBox(height: 16),
-        if (library.folders.isEmpty)
-          Text('追加したフォルダはありません。',
-              style: Theme.of(context).textTheme.bodyMedium)
-        else
-          ...library.folders.map(
-            (f) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.folder_rounded),
-              title: Text(f, maxLines: 2, overflow: TextOverflow.ellipsis),
-              trailing: IconButton(
-                icon: const Icon(Icons.remove_circle_outline_rounded),
-                tooltip: 'このフォルダを外す',
-                onPressed: () => library.removeFolder(f),
+        Row(
+          children: [
+            Text('自分で作る', style: Theme.of(context).textTheme.titleSmall),
+            const Spacer(),
+            if (s.accentIsCustom)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: s.accent,
+                  borderRadius: BorderRadius.circular(s.radius * 0.5),
+                ),
               ),
-            ),
-          ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: () async {
-            final granted = await library.requestPermission();
-            if (!granted) return;
-            final path = await FilePicker.getDirectoryPath();
-            if (path == null) return;
-            await library.addFolder(path);
-            await library.scan();
-          },
-          icon: const Icon(Icons.create_new_folder_rounded),
-          label: const Text('フォルダを追加'),
+          ],
+        ),
+        _SliderRow(
+          label: '色あい',
+          value: hsl.hue,
+          min: 0,
+          max: 360,
+          display: '${hsl.hue.round()}°',
+          onChanged: (v) => apply(h: v),
+        ),
+        _SliderRow(
+          label: '鮮やかさ',
+          value: hsl.saturation,
+          min: 0,
+          max: 1,
+          display: '${(hsl.saturation * 100).round()}%',
+          onChanged: (v) => apply(sat: v),
+        ),
+        _SliderRow(
+          label: '明るさ',
+          value: hsl.lightness,
+          min: 0.15,
+          max: 0.85,
+          display: '${(hsl.lightness * 100).round()}%',
+          onChanged: (v) => apply(l: v),
         ),
       ],
     );
@@ -323,7 +382,12 @@ class _SliderRow extends StatelessWidget {
             Text(display, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
-        Slider(value: value.clamp(min, max), min: min, max: max, onChanged: onChanged),
+        Slider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          onChanged: onChanged,
+        ),
       ],
     );
   }

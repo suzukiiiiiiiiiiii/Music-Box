@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -12,7 +14,13 @@ class PlayerModel extends ChangeNotifier {
   List<Song> _queue = [];
   String _queueLabel = '';
 
+  /// キューの各行に振る使い捨ての ID。同じ曲を2回入れても区別が付くので、
+  /// 並べ替えできるリストの key に使える(パスだと重複して壊れる)。
+  List<int> _queueIds = [];
+  int _nextQueueId = 0;
+
   List<Song> get queue => _queue;
+  List<int> get queueIds => _queueIds;
   String get queueLabel => _queueLabel;
 
   PlayerModel() {
@@ -39,15 +47,7 @@ class PlayerModel extends ChangeNotifier {
   Duration get position => player.position;
   Duration? get duration => player.duration;
 
-  /// 曲の並びを丸ごと差し替えて index 番から再生する。
-  Future<void> playQueue(List<Song> songs, int index, {String label = ''}) async {
-    if (songs.isEmpty) return;
-    _queue = songs;
-    _queueLabel = label;
-    notifyListeners();
-
-    final sources = songs.map((s) {
-      return AudioSource.file(
+  AudioSource _sourceFor(Song s) => AudioSource.file(
         s.path,
         tag: MediaItem(
           id: s.path,
@@ -58,14 +58,63 @@ class PlayerModel extends ChangeNotifier {
           artUri: s.artPath == null ? null : Uri.file(s.artPath!),
         ),
       );
-    }).toList();
+
+  /// 曲の並びを丸ごと差し替えて index 番から再生する。
+  Future<void> playQueue(List<Song> songs, int index, {String label = ''}) async {
+    if (songs.isEmpty) return;
+    _queue = [...songs];
+    _queueIds = [for (var i = 0; i < _queue.length; i++) _nextQueueId++];
+    _queueLabel = label;
+    notifyListeners();
 
     await player.setAudioSources(
-      sources,
-      initialIndex: index,
+      _queue.map(_sourceFor).toList(),
+      initialIndex: index.clamp(0, _queue.length - 1),
       initialPosition: Duration.zero,
     );
     await player.play();
+  }
+
+  /// 今の曲の次に割り込ませる。何も鳴っていなければそのまま再生を始める。
+  Future<void> playNext(Song song, {String label = ''}) async {
+    if (_queue.isEmpty) return playQueue([song], 0, label: label);
+    final at = (player.currentIndex ?? -1) + 1;
+    _queue.insert(at, song);
+    _queueIds.insert(at, _nextQueueId++);
+    notifyListeners();
+    await player.insertAudioSource(at, _sourceFor(song));
+  }
+
+  /// キューの最後に足す。
+  Future<void> addToQueue(Song song, {String label = ''}) async {
+    if (_queue.isEmpty) return playQueue([song], 0, label: label);
+    _queue.add(song);
+    _queueIds.add(_nextQueueId++);
+    notifyListeners();
+    await player.addAudioSource(_sourceFor(song));
+  }
+
+  /// キューから 1 曲外す。再生中の曲を外すと just_audio が次の曲へ送る。
+  Future<void> removeFromQueue(int index) async {
+    if (index < 0 || index >= _queue.length) return;
+    _queue.removeAt(index);
+    _queueIds.removeAt(index);
+    notifyListeners();
+    await player.removeAudioSourceAt(index);
+  }
+
+  /// キューの並べ替え。[newIndex] は動かした曲を抜いたあとの位置
+  /// (ReorderableListView の onReorderItem がくれる値) を想定している。
+  Future<void> moveInQueue(int oldIndex, int newIndex) async {
+    if (oldIndex == newIndex) return;
+    if (oldIndex < 0 || oldIndex >= _queue.length) return;
+    if (newIndex < 0 || newIndex >= _queue.length) return;
+    // just_audio の moveAudioSource も insert(newIndex, removeAt(oldIndex))
+    // なので、同じ数え方で揃えておけばずれない。
+    _queue.insert(newIndex, _queue.removeAt(oldIndex));
+    _queueIds.insert(newIndex, _queueIds.removeAt(oldIndex));
+    notifyListeners();
+    await player.moveAudioSource(oldIndex, newIndex);
   }
 
   Future<void> togglePlay() async {
@@ -106,8 +155,43 @@ class PlayerModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- スリープタイマー ---
+
+  Timer? _sleepTimer;
+  DateTime? _sleepAt;
+
+  /// 眠りに落ちる時刻。設定されていなければ null。
+  DateTime? get sleepAt => _sleepAt;
+
+  Duration? get sleepRemaining {
+    final at = _sleepAt;
+    if (at == null) return null;
+    final left = at.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  /// [d] が null ならタイマーを解除する。
+  void setSleepTimer(Duration? d) {
+    _sleepTimer?.cancel();
+    if (d == null) {
+      _sleepTimer = null;
+      _sleepAt = null;
+      notifyListeners();
+      return;
+    }
+    _sleepAt = DateTime.now().add(d);
+    _sleepTimer = Timer(d, () async {
+      await player.pause();
+      _sleepTimer = null;
+      _sleepAt = null;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
+
   @override
   void dispose() {
+    _sleepTimer?.cancel();
     player.dispose();
     super.dispose();
   }

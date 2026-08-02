@@ -5,77 +5,56 @@ import '../library_model.dart';
 import '../player_model.dart';
 import '../widgets.dart';
 
-class PlaylistsTab extends StatelessWidget {
-  const PlaylistsTab({super.key});
-
-  Future<void> _create(BuildContext context) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('プレイリストを作る'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '例: 作業用、通学中'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('やめる'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-            child: const Text('作る'),
-          ),
-        ],
-      ),
-    );
-    if (name != null && name.trim().isNotEmpty && context.mounted) {
-      await context.read<LibraryModel>().createPlaylist(name);
-    }
-  }
+class PlaylistsScreen extends StatelessWidget {
+  const PlaylistsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final library = context.watch<LibraryModel>();
 
-    if (library.playlists.isEmpty) {
-      return EmptyState(
-        icon: Icons.queue_music_rounded,
-        title: 'プレイリストがありません',
-        body: '気分ごとに曲をまとめておけます。',
-        actionLabel: 'プレイリストを作る',
-        onAction: () => _create(context),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 90),
-      children: [
-        ...library.playlists.map((pl) {
-          final songs = library.songsOf(pl);
-          return ListTile(
-            leading: songs.isEmpty
-                ? const Icon(Icons.queue_music_rounded, size: 40)
-                : Artwork(song: songs.first, size: 46),
-            title: Text(pl.name),
-            subtitle: Text('${songs.length} 曲'),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => PlaylistDetailScreen(name: pl.name)),
-            ),
-          );
-        }),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: OutlinedButton.icon(
-            onPressed: () => _create(context),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('プレイリスト'),
+        actions: [
+          IconButton(
             icon: const Icon(Icons.add_rounded),
-            label: const Text('プレイリストを作る'),
+            tooltip: 'プレイリストを作る',
+            onPressed: () => promptPlaylistName(context),
           ),
-        ),
-      ],
+        ],
+      ),
+      body: library.playlists.isEmpty
+          ? EmptyState(
+              icon: Icons.queue_music_rounded,
+              title: 'プレイリストがありません',
+              body: '気分ごとに曲をまとめておけます。\n作ったあと、曲の「…」から追加できます。',
+              actionLabel: 'プレイリストを作る',
+              onAction: () => promptPlaylistName(context),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
+              itemCount: library.playlists.length,
+              itemBuilder: (context, i) {
+                final pl = library.playlists[i];
+                final songs = library.songsOf(pl);
+                return ListTile(
+                  leading: songs.isEmpty
+                      ? const SizedBox(
+                          width: 46,
+                          height: 46,
+                          child: Icon(Icons.queue_music_rounded, size: 30),
+                        )
+                      : Artwork(song: songs.first, size: 46),
+                  title: Text(pl.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text('${songs.length} 曲'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PlaylistDetailScreen(name: pl.name),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -106,34 +85,12 @@ class PlaylistDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(playlist.name),
+        title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded),
             tooltip: 'このプレイリストを削除',
-            onPressed: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  title: Text('「${playlist.name}」を削除しますか'),
-                  content: const Text('曲そのものは端末に残ります。'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      child: const Text('やめる'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(true),
-                      child: const Text('削除'),
-                    ),
-                  ],
-                ),
-              );
-              if (ok == true && context.mounted) {
-                await context.read<LibraryModel>().deletePlaylist(playlist.name);
-                if (context.mounted) Navigator.of(context).pop();
-              }
-            },
+            onPressed: () => _confirmDelete(context, playlist.name),
           ),
         ],
       ),
@@ -141,25 +98,29 @@ class PlaylistDetailScreen extends StatelessWidget {
           ? const EmptyState(
               icon: Icons.playlist_add_rounded,
               title: 'まだ曲が入っていません',
-              body: '曲の一覧で「…」を押すと、ここに追加できます。',
+              body: 'ライブラリで曲の「…」を押して、\n「プレイリストに追加」から入れられます。',
             )
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Row(
                     children: [
+                      Expanded(
+                        child: Text('${songs.length} 曲',
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ),
                       FilledButton.icon(
-                        onPressed: () => player.playQueue(songs, 0, label: playlist.name),
+                        onPressed: () =>
+                            player.playQueue(songs, 0, label: playlist.name),
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: const Text('再生'),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       OutlinedButton.icon(
-                        onPressed: () {
-                          final shuffled = [...songs]..shuffle();
-                          player.playQueue(shuffled, 0, label: playlist.name);
-                        },
+                        onPressed: () => player.playQueue(
+                            [...songs]..shuffle(), 0,
+                            label: playlist.name),
                         icon: const Icon(Icons.shuffle_rounded),
                         label: const Text('シャッフル'),
                       ),
@@ -168,7 +129,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                 ),
                 Expanded(
                   child: ReorderableListView.builder(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 90),
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
                     itemCount: songs.length,
                     onReorderItem: (oldIndex, newIndex) =>
                         context.read<LibraryModel>().reorderPlaylist(
@@ -193,15 +154,49 @@ class PlaylistDetailScreen extends StatelessWidget {
                         child: SongTile(
                           song: song,
                           active: player.current?.path == song.path,
-                          onTap: () => player.playQueue(songs, i, label: playlist.name),
+                          onTap: () =>
+                              player.playQueue(songs, i, label: playlist.name),
+                          trailing: ReorderableDragStartListener(
+                            index: i,
+                            child: const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(Icons.drag_handle_rounded),
+                            ),
+                          ),
                         ),
                       );
                     },
                   ),
                 ),
-                const MiniPlayer(),
               ],
             ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, String playlistName) async {
+    final library = context.read<LibraryModel>();
+    final navigator = Navigator.of(context);
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('「$playlistName」を削除しますか'),
+        content: const Text('曲そのものは端末に残ります。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('やめる'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('削除'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+    await library.deletePlaylist(playlistName);
+    navigator.pop();
   }
 }

@@ -13,7 +13,8 @@ pubspec.lock
 /macos/
 /windows/
 /web/
-/test/
+# test/ 自体は追跡する。flutter create が毎回作り直すこれだけ外す。
+/test/widget_test.dart
 .metadata
 
 # エディタ

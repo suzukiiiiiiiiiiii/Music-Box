@@ -35,6 +35,13 @@ class LibraryModel extends ChangeNotifier {
   late Directory _appDir;
   late Directory _artDir;
 
+  /// テストから曲一覧を差し込む。端末を読みに行かずに絞り込みと並べ替えを試せる。
+  @visibleForTesting
+  void seedSongs(List<Song> songs) {
+    _songs = songs;
+    notifyListeners();
+  }
+
   /// Android が既定で音楽を置く場所。ユーザーが何も足さなくてもここは見に行く。
   static const defaultFolders = [
     '/storage/emulated/0/Music',
@@ -139,7 +146,6 @@ class LibraryModel extends ChangeNotifier {
         if (_scanned % 25 == 0) notifyListeners();
       }
 
-      result.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
       _songs = result;
       await _saveIndex();
     } catch (e) {
@@ -153,6 +159,12 @@ class LibraryModel extends ChangeNotifier {
   /// タグ読み取り。パッケージの API 変更に巻き込まれないよう dynamic 越しに触り、
   /// 失敗したらファイル名から組み立てた Song に落とす。
   Future<Song> _readSong(File file) async {
+    // 「新しい順」に使う。stat が読めない環境でも走り続ける。
+    DateTime? addedAt;
+    try {
+      addedAt = file.statSync().modified;
+    } catch (_) {}
+
     try {
       // readMetadata は同期関数。曲数が多いと一瞬引っかかるが、
       // ネイティブ実装を挟まないぶん機種差で壊れにくい。
@@ -165,7 +177,7 @@ class LibraryModel extends ChangeNotifier {
       }
 
       final title = str(md.title) ?? p.basenameWithoutExtension(file.path);
-      final artist = str(md.artist) ?? '不明なアーティスト';
+      final artist = str(md.artist) ?? Song.unknownArtist;
       final album = str(md.album) ?? p.basename(p.dirname(file.path));
       Duration? duration;
       try {
@@ -182,9 +194,10 @@ class LibraryModel extends ChangeNotifier {
         album: album,
         duration: duration,
         artPath: artPath,
+        addedAt: addedAt,
       );
     } catch (_) {
-      return Song.fromPath(file.path);
+      return Song.fromPath(file.path, addedAt: addedAt);
     }
   }
 
@@ -221,10 +234,14 @@ class LibraryModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> createPlaylist(String name) async {
-    if (name.trim().isEmpty) return;
-    _playlists = [..._playlists, PlaylistData(name: name.trim(), paths: [])];
+  /// 同じ名前が既にあれば作らない。作った(または既にあった)名前を返す。
+  Future<String?> createPlaylist(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+    if (_playlists.any((pl) => pl.name == trimmed)) return trimmed;
+    _playlists = [..._playlists, PlaylistData(name: trimmed, paths: [])];
     await _savePlaylists();
+    return trimmed;
   }
 
   Future<void> deletePlaylist(String name) async {
@@ -293,6 +310,11 @@ class LibraryModel extends ChangeNotifier {
         .toList();
   }
 
+  // --- 検索と並べ替え ---
+
+  /// 曲名・アーティスト・アルバムのどれかに当たれば拾う。アルバム名で当たると
+  /// そのアルバムの曲が丸ごと残るので、アルバム/アーティストの一覧にも同じ
+  /// 絞り込みをそのまま使える。
   List<Song> search(String query) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return _songs;
@@ -303,10 +325,44 @@ class LibraryModel extends ChangeNotifier {
     }).toList();
   }
 
-  Map<String, List<Song>> groupBy(String Function(Song) key) {
+  /// 絞り込みと並べ替えをまとめて掛けた、画面にそのまま出せる一覧。
+  List<Song> view({String query = '', SongSort sort = SongSort.title}) {
+    final result = [...search(query)];
+    result.sort((a, b) => _compare(a, b, sort));
+    return result;
+  }
+
+  static int _compare(Song a, Song b, SongSort sort) {
+    int byTitle() => a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    switch (sort) {
+      case SongSort.title:
+        return byTitle();
+      case SongSort.artist:
+        final c = a.artist.toLowerCase().compareTo(b.artist.toLowerCase());
+        return c != 0 ? c : byTitle();
+      case SongSort.album:
+        final c = a.album.toLowerCase().compareTo(b.album.toLowerCase());
+        return c != 0 ? c : byTitle();
+      case SongSort.newest:
+        // 日時が無い曲は最後にまわす。
+        final at = a.addedAt;
+        final bt = b.addedAt;
+        if (at == null && bt == null) return byTitle();
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        final c = bt.compareTo(at);
+        return c != 0 ? c : byTitle();
+    }
+  }
+
+  /// アルバム / アーティストのまとまり。中の曲はアルバム順に整える。
+  Map<String, List<Song>> groups(String Function(Song) key, {String query = ''}) {
     final map = <String, List<Song>>{};
-    for (final s in _songs) {
+    for (final s in search(query)) {
       map.putIfAbsent(key(s), () => []).add(s);
+    }
+    for (final list in map.values) {
+      list.sort((a, b) => _compare(a, b, SongSort.album));
     }
     return map;
   }

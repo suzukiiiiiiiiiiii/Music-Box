@@ -96,6 +96,49 @@ ThemeData buildTheme(SettingsModel s, {Color? artAccent}) {
         borderRadius: BorderRadius.vertical(top: Radius.circular(s.radius + 8)),
       ),
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: card,
+      indicatorColor: accent.withValues(alpha: 0.22),
+      elevation: 0,
+      height: 64 * s.density,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 11 * s.textScale,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w700
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? scheme.onSurface
+              : scheme.onSurface.withValues(alpha: 0.6),
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? scheme.onSurface
+              : scheme.onSurface.withValues(alpha: 0.6),
+        ),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: radius),
+        ),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: card,
+      border: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide.none),
+      enabledBorder:
+          OutlineInputBorder(borderRadius: radius, borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: accent, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    ),
   );
 }
 
