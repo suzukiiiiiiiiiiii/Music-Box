@@ -1,0 +1,48 @@
+name: music_box
+description: A customizable offline music player.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  # 下限は file_picker 12 が決めている。AGP 9 の Built-in Kotlin に対応した
+  # ビルド定義を持つのが 12 系だけで、それが Flutter 3.38 以上を要求する。
+  sdk: ^3.10.0
+  flutter: '>=3.38.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 再生エンジン。0.10.x の playlist API (setAudioSources) を使う。
+  just_audio: ^0.10.4
+  # バックグラウンド再生 + 通知バー操作。安定版がまだ無いので beta を指定する。
+  just_audio_background: ^0.0.1-beta.17
+  # 音源フォルダの選択。11.x は AGP 9 のとき Kotlin プラグインを適用しないのに
+  # ソースが全部 .kt なので、FilePickerPlugin が一切コンパイルされず
+  # GeneratedPluginRegistrant がリンクできない。12 系が Built-in Kotlin に
+  # 対応しているのでそちらを使う。まだ beta しか出ていない。
+  # 11.x で FilePicker.platform が消えて static 呼び出しになった点は 12 でも同じ。
+  file_picker: ^12.0.0-beta.7
+  # READ_MEDIA_AUDIO の要求。13.0.0 が引く permission_handler_android 14 は
+  # compileSdk 37 を要求するが、Flutter 3.44 の既定は 36 で AGP 9.0.1 の推奨上限も
+  # 36 なので AAR メタデータの検査で落ちる。compileSdk 35 で収まる 12 系に留める。
+  permission_handler: ^12.0.3
+  # 設定とプレイリストの保存
+  shared_preferences: ^2.5.5
+  # ライブラリ索引とアートワークのキャッシュ置き場
+  path_provider: ^2.1.5
+  # 純 Dart のタグ読み取り(ネイティブコード無し = CI で壊れにくい)
+  audio_metadata_reader: ^1.7.1
+  # 状態管理
+  provider: ^6.1.5
+  # パス操作とアートワークのファイル名生成
+  path: ^1.9.0
+  crypto: ^3.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true
