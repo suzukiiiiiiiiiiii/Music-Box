@@ -20,8 +20,10 @@ dependencies:
   # 音源フォルダの選択。11.x で FilePicker.platform が消えて static 呼び出しに
   # 変わったので、メジャーを勝手に跨がないよう上限を効かせておく。
   file_picker: ^11.0.3
-  # READ_MEDIA_AUDIO の要求
-  permission_handler: ^13.0.0
+  # READ_MEDIA_AUDIO の要求。13.0.0 が引く permission_handler_android 14 は
+  # compileSdk 37 を要求するが、Flutter 3.44 の既定は 36 で AGP 9.0.1 の推奨上限も
+  # 36 なので AAR メタデータの検査で落ちる。compileSdk 35 で収まる 12 系に留める。
+  permission_handler: ^12.0.3
   # 設定とプレイリストの保存
   shared_preferences: ^2.5.5
   # ライブラリ索引とアートワークのキャッシュ置き場
