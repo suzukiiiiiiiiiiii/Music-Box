@@ -65,6 +65,12 @@ lib/
 **`flutter analyze` が知らないエラーを出す**
 依存パッケージが破壊的変更を入れた可能性が高い。`pubspec.yaml` は主要な依存をキャレット指定で止めてあるので、上げるときは 1 つずつ。過去に `file_picker` が 11.0.0 で `FilePicker.platform` を廃止して static 呼び出しになった例がある。
 
+**`GeneratedPluginRegistrant.java` で `cannot find symbol` が出る**
+そのプラグインの Kotlin が 1 行もコンパイルされていない。Flutter 3.38 以降は AGP 9 の Built-in Kotlin を使うが、プラグイン側が「AGP 9 なら Kotlin プラグインを当てない」とだけ書いて Built-in Kotlin を見ていないと、`.kt` が丸ごと無視されてクラスが消える。`file_picker` 11.0.3 がこれで、12 系で直っている。プラグインの `android/build.gradle` が `android.builtInKotlin` を見ているか確認する。
+
+**`checkReleaseAarMetadata` で「compile against version 37 or later」と言われる**
+プラグインが Flutter の既定 `compileSdk` より新しい SDK を要求している。AGP にも推奨上限があるので上げれば済むとは限らない。`compileSdk` が収まるバージョンまでそのプラグインを下げるほうが確実。`permission_handler` を 12 系に留めているのはこれが理由。
+
 **`bytes` が見つからない、といったエラーが `library_model.dart` で出る**
 `audio_metadata_reader` のプロパティ名が変わった可能性がある。該当箇所は `_extractArt` の中だけで、しかも dynamic 経由なのでコンパイルは通るはず。ジャケットが出ない場合はここを疑う。ジャケットが無くてもタイトルから作ったグラデーションで代用されるので、再生自体は動く。
 

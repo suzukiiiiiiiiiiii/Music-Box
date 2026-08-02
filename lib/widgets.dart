@@ -21,7 +21,7 @@ class Artwork extends StatelessWidget {
     final art = song?.artPath;
     final child = (art != null && File(art).existsSync())
         ? Image.file(File(art), width: size, height: size, fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _fallback(context))
+            errorBuilder: (_, _, _) => _fallback(context))
         : _fallback(context);
 
     return ClipRRect(borderRadius: BorderRadius.circular(radius), child: child);

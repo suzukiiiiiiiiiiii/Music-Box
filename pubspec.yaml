@@ -4,10 +4,10 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  # just_audio 0.10.x が Dart ^3.6.0 / Flutter 3.27 以上を要求する。
-  # CardThemeData と Color.toARGB32() を使うので Flutter は 3.29 以上。
-  sdk: ^3.6.0
-  flutter: '>=3.29.0'
+  # 下限は file_picker 12 が決めている。AGP 9 の Built-in Kotlin に対応した
+  # ビルド定義を持つのが 12 系だけで、それが Flutter 3.38 以上を要求する。
+  sdk: ^3.10.0
+  flutter: '>=3.38.0'
 
 dependencies:
   flutter:
@@ -17,9 +17,12 @@ dependencies:
   just_audio: ^0.10.4
   # バックグラウンド再生 + 通知バー操作。安定版がまだ無いので beta を指定する。
   just_audio_background: ^0.0.1-beta.17
-  # 音源フォルダの選択。11.x で FilePicker.platform が消えて static 呼び出しに
-  # 変わったので、メジャーを勝手に跨がないよう上限を効かせておく。
-  file_picker: ^11.0.3
+  # 音源フォルダの選択。11.x は AGP 9 のとき Kotlin プラグインを適用しないのに
+  # ソースが全部 .kt なので、FilePickerPlugin が一切コンパイルされず
+  # GeneratedPluginRegistrant がリンクできない。12 系が Built-in Kotlin に
+  # 対応しているのでそちらを使う。まだ beta しか出ていない。
+  # 11.x で FilePicker.platform が消えて static 呼び出しになった点は 12 でも同じ。
+  file_picker: ^12.0.0-beta.7
   # READ_MEDIA_AUDIO の要求。13.0.0 が引く permission_handler_android 14 は
   # compileSdk 37 を要求するが、Flutter 3.44 の既定は 36 で AGP 9.0.1 の推奨上限も
   # 36 なので AAR メタデータの検査で落ちる。compileSdk 35 で収まる 12 系に留める。

@@ -254,13 +254,15 @@ class LibraryModel extends ChangeNotifier {
   /// 並べ替え。[visiblePaths] は画面に出ている順のパス一覧で、[oldIndex] と
   /// [newIndex] はその上での位置。ファイルが消えた曲は一覧から抜けているため、
   /// 保存している paths の添字とは一致しない。パスを手がかりに突き合わせる。
+  ///
+  /// [newIndex] は ReorderableListView の onReorderItem が渡す、動かした曲を
+  /// 抜いたあとの並びでの位置。呼ぶ側で -1 する必要はない。
   Future<void> reorderPlaylist(
     String name,
     int oldIndex,
     int newIndex,
     List<String> visiblePaths,
   ) async {
-    if (newIndex > oldIndex) newIndex -= 1;
     if (oldIndex == newIndex) return;
     if (oldIndex < 0 || oldIndex >= visiblePaths.length) return;
 

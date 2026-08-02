@@ -170,7 +170,7 @@ class PlaylistDetailScreen extends StatelessWidget {
                   child: ReorderableListView.builder(
                     padding: const EdgeInsets.fromLTRB(8, 0, 8, 90),
                     itemCount: songs.length,
-                    onReorder: (oldIndex, newIndex) =>
+                    onReorderItem: (oldIndex, newIndex) =>
                         context.read<LibraryModel>().reorderPlaylist(
                               playlist.name,
                               oldIndex,
