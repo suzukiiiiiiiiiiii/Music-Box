@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_single_quotes: true
+
+analyzer:
+  errors:
+    # 非推奨の警告でビルドを止めない
+    deprecated_member_use: info
+    deprecated_member_use_from_same_package: info

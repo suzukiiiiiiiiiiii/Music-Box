@@ -1,0 +1,38 @@
+name: sing_along
+description: 歌詞を追いながら聴くオフラインの音楽プレイヤー
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 再生エンジン。0.10 系の setAudioSources を使う。
+  just_audio: ^0.10.4
+  # バックグラウンド再生と通知バーからの操作。安定版がまだ無いので beta を指定する。
+  just_audio_background: ^0.0.1-beta.17
+  # タグと埋め込み歌詞の読み取り。純 Dart なので機種差で壊れにくい。
+  audio_metadata_reader: ^1.7.1
+  # READ_MEDIA_AUDIO の要求
+  permission_handler: ^11.3.1
+  # 設定・プレイリスト・キューの保存
+  shared_preferences: ^2.3.2
+  # ライブラリ索引とアートワークのキャッシュ置き場
+  path_provider: ^2.1.5
+  # パス操作
+  path: ^1.9.0
+  # アートワークのキャッシュ名を作る
+  crypto: ^3.0.6
+  # 状態管理
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

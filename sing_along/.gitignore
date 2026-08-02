@@ -1,0 +1,30 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+.metadata
+
+# tool/prepare_android.sh が毎回生成するので追跡しない
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+# flutter create が毎回作り直す。存在しない MyApp を参照していて解析が落ちる。
+/test/widget_test.dart
+
+# エディタ
+.idea/
+.vscode/
+*.iml
+
+# ビルド成果物
+*.apk
+*.aab
+*.jks
+*.keystore
+key.properties

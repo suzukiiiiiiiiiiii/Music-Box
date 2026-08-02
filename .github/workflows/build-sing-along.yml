@@ -1,0 +1,53 @@
+name: Build Sing Along APK
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+    paths:
+      - 'sing_along/**'
+      - '.github/workflows/build-sing-along.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: sing_along
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+
+      # android/ はリポジトリに置かず、毎回ここで生成する。
+      - name: Prepare android project
+        run: ./tool/prepare_android.sh
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
+      # --no-shrink: R8 が just_audio_background のクラスを削ってしまい、
+      # release ビルドだけ再生が始まらなくなる既知の問題を避ける。
+      - name: Build APK
+        run: flutter build apk --release --no-shrink
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sing-along-apk
+          path: sing_along/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

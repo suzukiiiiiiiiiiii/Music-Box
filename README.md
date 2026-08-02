@@ -2,11 +2,14 @@
 
 端末に入っている音楽ファイルを再生する Android アプリ。見た目をユーザー自身が調整できるのが中心の機能。
 
-> **このリポジトリには別のアプリも入っています。**
-> `music_player/` は後から持ち込んだ別実装（MediaStore + `on_audio_query` ベース)で、
-> 下に書いてある Music Box とは独立したアプリです。APK は GitHub Actions の
-> **Build Music Player APK** が作ります。詳しくは
-> [music_player/README.md](music_player/README.md) を参照してください。
+> **このリポジトリには別のアプリも入っています。** どれも独立していて、
+> ワークフローも別々です。
+>
+> | 場所 | 中身 | APK を作るワークフロー |
+> | --- | --- | --- |
+> | ここ (`lib/`) | Music Box — 見た目を自分で調整するのが中心 | Build APK |
+> | [`music_player/`](music_player/README.md) | MediaStore + `on_audio_query` の実装 | Build Music Player APK |
+> | [`sing_along/`](sing_along/README.md) | 複数キューとフォルダ閲覧、時刻つき歌詞 | Build Sing Along APK |
 
 ## 画面の作り
 
