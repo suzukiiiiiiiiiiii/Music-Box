@@ -15,75 +15,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare Android project
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ls -la
-          if [ -f music-box.zip ]; then
-            echo "Found packaged project archive"
-            mkdir -p extracted
-            unzip -q music-box.zip -d extracted || {
-              echo "Failed to unzip music-box.zip" >&2
-              exit 1
-            }
-          fi
-
-          echo "Searching for Android project files..."
-          find . extracted -maxdepth 6 \( -name gradlew -o -name build.gradle -o -name build.gradle.kts -o -name settings.gradle -o -name settings.gradle.kts \) 2>/dev/null | head -200
-
-      - name: Set up JDK 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.8"
+          channel: stable
+          cache: true
 
-      - name: Locate project directory
-        id: project
+      - name: Extract project
+        shell: bash
+        run: unzip -q music-box.zip -d extracted
+
+      - name: Generate Android project
+        working-directory: extracted/musicbox
+        run: flutter create --platforms=android --project-name music_box --org com.example .
+
+      - name: Apply Android manifest
+        working-directory: extracted/musicbox
         shell: bash
         run: |
-          set -euxo pipefail
-
-          candidates="$(find . extracted -type f -name gradlew 2>/dev/null | head -n 20)"
-          if [ -z "$candidates" ]; then
-            echo "No gradlew found in repository or extracted archive." >&2
-            exit 1
+          if [ -f android_config/AndroidManifest.xml ]; then
+            cp android_config/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           fi
 
-          project_dir="$(dirname "$(echo "$candidates" | head -n 1)")"
-          echo "project_dir=$project_dir" >> "$GITHUB_OUTPUT"
-          echo "Using project dir: $project_dir"
+      - name: Install dependencies
+        working-directory: extracted/musicbox
+        run: flutter pub get
 
-      - name: Build debug APK
-        shell: bash
-        working-directory: ${{ steps.project.outputs.project_dir }}
-        run: |
-          set -euxo pipefail
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+      - name: Analyze
+        working-directory: extracted/musicbox
+        run: flutter analyze --no-fatal-infos
 
-      - name: Find APK artifact
-        id: apk
-        shell: bash
-        run: |
-          set -euxo pipefail
-          apk_path="$(find . extracted -type f -name '*.apk' 2>/dev/null | head -n 1)"
-          if [ -z "$apk_path" ]; then
-            echo "No APK file was generated." >&2
-            exit 1
-          fi
-          echo "apk_path=$apk_path" >> "$GITHUB_OUTPUT"
-          echo "Found APK: $apk_path"
+      - name: Build release APK
+        working-directory: extracted/musicbox
+        run: flutter build apk --release --no-shrink
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
           name: Music Box APK ${{ github.run_number }}
-          files: ${{ steps.apk.outputs.apk_path }}
+          files: extracted/musicbox/build/app/outputs/flutter-apk/app-release.apk
           draft: false
           prerelease: false
