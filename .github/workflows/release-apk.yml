@@ -36,6 +36,26 @@ jobs:
         working-directory: extracted/musicbox
         run: flutter create --platforms=android --project-name music_box --org com.example .
 
+      # flutter create scaffolds a sample test that refers to its placeholder
+      # MyApp and assumes flutter_test is a dependency. This app has no tests.
+      - name: Remove generated placeholder test and fix file_picker API
+        working-directory: extracted/musicbox
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -f test/widget_test.dart
+          find test -type d -empty -delete 2>/dev/null || true
+
+          # file_picker 11+ uses static methods; the source archive still uses
+          # the removed FilePicker.platform facade at these two call sites.
+          grep -RIl 'FilePicker\.platform\.getDirectoryPath' lib \
+            | xargs -r sed -i 's/FilePicker\.platform\.getDirectoryPath/FilePicker.getDirectoryPath/g'
+
+          if grep -RIn 'FilePicker\.platform' lib; then
+            echo "Found stale FilePicker.platform API usage" >&2
+            exit 1
+          fi
+
       - name: Apply Android manifest
         working-directory: extracted/musicbox
         shell: bash
