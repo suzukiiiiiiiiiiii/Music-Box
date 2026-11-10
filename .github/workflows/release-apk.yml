@@ -1,0 +1,89 @@
+name: Build and Release APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Android project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ls -la
+          if [ -f music-box.zip ]; then
+            echo "Found packaged project archive"
+            mkdir -p extracted
+            unzip -q music-box.zip -d extracted || {
+              echo "Failed to unzip music-box.zip" >&2
+              exit 1
+            }
+          fi
+
+          echo "Searching for Android project files..."
+          find . extracted -maxdepth 6 \( -name gradlew -o -name build.gradle -o -name build.gradle.kts -o -name settings.gradle -o -name settings.gradle.kts \) 2>/dev/null | head -200
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Locate project directory
+        id: project
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          candidates="$(find . extracted -type f -name gradlew 2>/dev/null | head -n 20)"
+          if [ -z "$candidates" ]; then
+            echo "No gradlew found in repository or extracted archive." >&2
+            exit 1
+          fi
+
+          project_dir="$(dirname "$(echo "$candidates" | head -n 1)")"
+          echo "project_dir=$project_dir" >> "$GITHUB_OUTPUT"
+          echo "Using project dir: $project_dir"
+
+      - name: Build debug APK
+        shell: bash
+        working-directory: ${{ steps.project.outputs.project_dir }}
+        run: |
+          set -euxo pipefail
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Find APK artifact
+        id: apk
+        shell: bash
+        run: |
+          set -euxo pipefail
+          apk_path="$(find . extracted -type f -name '*.apk' 2>/dev/null | head -n 1)"
+          if [ -z "$apk_path" ]; then
+            echo "No APK file was generated." >&2
+            exit 1
+          fi
+          echo "apk_path=$apk_path" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $apk_path"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Music Box APK ${{ github.run_number }}
+          files: ${{ steps.apk.outputs.apk_path }}
+          draft: false
+          prerelease: false
