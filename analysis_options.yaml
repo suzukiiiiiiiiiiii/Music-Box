@@ -1,0 +1,8 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # 生成物の android/ は CI が毎回作り直すので解析対象から外す
+    unused_import: warning
+  exclude:
+    - android/**
